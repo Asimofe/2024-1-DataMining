@@ -1,19 +1,3 @@
-'''
-y
-0    8412
-1    1588
-Name: count, dtype: int64
-Accuracy: 0.5740833751883475
-Classification Report:
-               precision    recall  f1-score   support
-
-           0       0.94      0.53      0.67      1671
-           1       0.25      0.82      0.38       320
-
-    accuracy                           0.57      1991
-   macro avg       0.59      0.67      0.53      1991
-weighted avg       0.83      0.57      0.63      1991
-'''
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,67 +5,87 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.cluster import DBSCAN
 from sklearn.model_selection import train_test_split
-from sklearn.svm import SVC                                                                                                                     
+from sklearn.svm import SVC
 from sklearn.metrics import classification_report, accuracy_score
 
 # 데이터 로드
-file_path = '../../data/purchase_train.csv'  # 파일 경로를 변경하세요
-data = pd.read_csv(file_path)
+train_file_path = '../../data/purchase_train.csv'  # 훈련 데이터 파일 경로
+test_file_path = '../../data/purchase_test.csv'    # 테스트 데이터 파일 경로
+train_data = pd.read_csv(train_file_path)
+test_data = pd.read_csv(test_file_path)
 
 # 타겟 변수 분포 확인
-print(data.iloc[:, -1].value_counts())
+print(train_data['y'].value_counts())
 
 # 문자열을 숫자형으로 변환
 month_mapping = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'June': 6, 
                  'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
-data['X6'] = data['X6'].map(month_mapping)
-
-# X11 열의 문자열 값을 숫자형으로 변환
 visitor_mapping = {'Returning_Visitor': 1, 'New_Visitor': 0, 'Other': 2}
-data['X11'] = data['X11'].map(visitor_mapping)
+
+for df in [train_data, test_data]:
+    df['X6'] = df['X6'].map(month_mapping)
+    df['X11'] = df['X11'].map(visitor_mapping)
 
 # X7부터 X12까지의 데이터 원 핫 인코딩
-data = pd.get_dummies(data, columns=['X7', 'X8', 'X9', 'X10', 'X12'], drop_first=True)
+train_data = pd.get_dummies(train_data, columns=['X7', 'X8', 'X9', 'X10', 'X12'], drop_first=True)
+test_data = pd.get_dummies(test_data, columns=['X7', 'X8', 'X9', 'X10', 'X12'], drop_first=True)
 
-# X1부터 X12까지의 데이터 선택 및 스케일링
-data_subset = data.drop(columns=['y'])  # 타겟 변수를 제외한 모든 피처 선택
+# 훈련 데이터와 테스트 데이터의 열을 동일하게 맞추기
+missing_cols_train = set(test_data.columns) - set(train_data.columns)
+missing_cols_test = set(train_data.columns) - set(test_data.columns)
+
+for col in missing_cols_train:
+    train_data[col] = 0
+for col in missing_cols_test:
+    test_data[col] = 0
+
+# 열 순서 맞추기
+train_data = train_data[test_data.columns]
+
+# 훈련 데이터 전처리
+X_train = train_data.drop(columns=['y'])
+y_train = train_data['y']
 scaler = StandardScaler()
-scaled_data = scaler.fit_transform(data_subset)
+X_train_scaled = scaler.fit_transform(X_train)
 
 # PCA를 사용하여 2차원으로 축소
 pca = PCA(n_components=2)
-pca_components = pca.fit_transform(scaled_data)
+pca_train_components = pca.fit_transform(X_train_scaled)
 
 # DBSCAN으로 이상치 탐지
 dbscan = DBSCAN(eps=0.5, min_samples=5)
-dbscan_labels = dbscan.fit_predict(pca_components)
-pca_df = pd.DataFrame(data=pca_components, columns=['PCA1', 'PCA2'])
-pca_df['is_outlier'] = dbscan_labels == -1
+dbscan_labels = dbscan.fit_predict(pca_train_components)
+pca_train_df = pd.DataFrame(data=pca_train_components, columns=['PCA1', 'PCA2'])
+pca_train_df['is_outlier'] = dbscan_labels == -1
 
 # 원본 데이터에서 이상치 제거
-data['is_outlier'] = pca_df['is_outlier']
-cleaned_data = data[~data['is_outlier']]
+train_data['is_outlier'] = pca_train_df['is_outlier']
+cleaned_train_data = train_data[~train_data['is_outlier']]
 
 # 데이터셋 분리
-X = cleaned_data.drop(columns=['is_outlier', 'y'])
-y = cleaned_data['y']
+X_train_cleaned = cleaned_train_data.drop(columns=['is_outlier', 'y'])
+y_train_cleaned = cleaned_train_data['y']
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# 스케일링
+X_train_cleaned_scaled = scaler.fit_transform(X_train_cleaned)
 
 # 모델 학습 (클래스 가중치 조정)
 clf = SVC(C=1.0, kernel='linear', class_weight='balanced', random_state=42)
-clf.fit(X_train, y_train)
+clf.fit(X_train_cleaned_scaled, y_train_cleaned)
+
+# 테스트 데이터 전처리
+X_test = test_data.drop(columns=['y'])
+y_test = test_data['y']
+X_test_scaled = scaler.transform(X_test)
 
 # 예측
-y_pred = clf.predict(X_test)
+y_test_pred = clf.predict(X_test_scaled)
 
 # 성능 평가
-print("Accuracy:", accuracy_score(y_test, y_pred))
-print("Classification Report:\n", classification_report(y_test, y_pred))
+print("Test Data Accuracy:", accuracy_score(y_test, y_test_pred))
+print("Test Data Classification Report:\n", classification_report(y_test, y_test_pred))
 
 # 결과를 파일로 저장
-train_data = pd.concat([X_train, y_train], axis=1)
-test_data = pd.concat([X_test, y_test], axis=1)
-
 train_data.to_csv('train_1.csv', index=False)
+test_data['predicted_y'] = y_test_pred
 test_data.to_csv('test_1.csv', index=False)

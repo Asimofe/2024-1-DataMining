@@ -1,3 +1,61 @@
+'''
+y
+0    8412
+1    1588
+Name: count, dtype: int64
+Internal Test Accuracy: 0.9995
+Internal Classification Report:
+               precision    recall  f1-score   support
+
+         0.0       1.00      1.00      1.00      1672
+         1.0       1.00      1.00      1.00       328
+
+    accuracy                           1.00      2000
+   macro avg       1.00      1.00      1.00      2000
+weighted avg       1.00      1.00      1.00      2000
+
+'y' column is found in the test data.
+Final Test Accuracy: 0.8525408348457351
+Final Classification Report:
+               precision    recall  f1-score   support
+
+         0.0       0.87      0.97      0.92      1884
+         1.0       0.48      0.17      0.25       320
+
+    accuracy                           0.85      2204
+   macro avg       0.68      0.57      0.59      2204
+weighted avg       0.82      0.85      0.82      2204
+
+max_depth = 10
+y
+0    8412
+1    1588
+Name: count, dtype: int64
+Internal Test Accuracy: 0.841
+Internal Classification Report:
+               precision    recall  f1-score   support
+
+         0.0       0.88      0.93      0.91      1672
+         1.0       0.52      0.38      0.44       328
+
+    accuracy                           0.84      2000
+   macro avg       0.70      0.66      0.67      2000
+weighted avg       0.82      0.84      0.83      2000
+
+'y' column is found in the test data.
+Final Test Accuracy: 0.822141560798548
+Final Classification Report:
+               precision    recall  f1-score   support
+
+         0.0       0.88      0.92      0.90      1884
+         1.0       0.35      0.28      0.31       320
+
+    accuracy                           0.82      2204
+   macro avg       0.62      0.60      0.60      2204
+weighted avg       0.80      0.82      0.81      2204
+
+'''
+
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
@@ -38,7 +96,7 @@ smote = SMOTE(random_state=42)
 X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
 
 # 랜덤 포레스트 모델 정의
-model = RandomForestClassifier(n_estimators=50, random_state=42)
+model = RandomForestClassifier(n_estimators=50, max_depth=5, random_state=42)
 
 # 모델 학습
 model.fit(X_resampled, y_resampled)

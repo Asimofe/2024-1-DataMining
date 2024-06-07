@@ -18,7 +18,7 @@ test_data = pd.read_csv('data/purchase_test.csv')
 X_train = train_data.drop('y', axis=1)  # 모든 입력변수 선택
 y_train = train_data['y']  # 출력변수 (구매여부)
 
-# 테스트 데이터셋의 feature와 target 분리 (테스트 데이터에 'y' 열이 있다고 가정)
+# 테스트 데이터셋의 feature와 target 분리 (테스트 데이터에 'y' 열이 있다고 가정)X
 X_test = test_data
 
 # 범주형 변수와 수치형 변수를 처리하는 파이프라인 생성

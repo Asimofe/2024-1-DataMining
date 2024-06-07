@@ -72,7 +72,7 @@ smote = SMOTE(random_state=42)
 X_resampled, y_resampled = smote.fit_resample(X_train_scaled, y_train)
 
 # 랜덤 포레스트 모델 정의
-model = RandomForestClassifier(n_estimators=50, random_state=42)
+model = RandomForestClassifier(n_estimators=50, max_depth=5, random_state=42)
 
 # 모델 학습
 model.fit(X_resampled, y_resampled)
